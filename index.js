@@ -244,7 +244,12 @@ async function generate() {
   if (!mogrtPath) throw new Error("Select a MOGRT template.");
   if (!tableRows.length) throw new Error("Load a spreadsheet first.");
   const mapping = getMapping();
-  if (!Object.keys(mapping).length) throw new Error("Set at least one column mapping.");
+  if (!Object.keys(mapping).length) {
+    const hint = mogrtParams.length
+      ? "Выберите параметр для колонки в разделе COLUMN MAPPING. Available: " + mogrtParams.map(p => p.displayName).join(", ")
+      : "Inspect Parameters сначала не нашёл текстовых параметров — добавьте имена вручную в COLUMN MAPPING.";
+    throw new Error(hint);
+  }
 
   const project = await ppro.Project.getActiveProject();
   if (!project) throw new Error("No open project.");
