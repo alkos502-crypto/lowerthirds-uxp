@@ -58,13 +58,19 @@ async function inspectMogrt() {
       const comp = chain.getComponentAtIndex(i);
       let match = "";
       try { match = await comp.getMatchName(); } catch (e) { match = ""; }
-      const isText = /ADBE Text/i.test(match) || /Text/i.test(match);
       const pcount = comp.getParamCount();
       console.log("Component", i, "matchName=", match, "params=", pcount);
       for (let p = 0; p < pcount; p++) {
         const param = comp.getParam(p);
         const dn = String(param.displayName || "").trim();
-        console.log("  param", p, "displayName=", JSON.stringify(dn));
+        // Determine "is text" by reading the start value: a MOGRT text param
+        // exposes a value object with getText(). Opacity/Motion return numbers.
+        let isText = false;
+        try {
+          const v = await param.getStartValue();
+          isText = !!(v && typeof v.getText === "function");
+        } catch (e) { isText = false; }
+        console.log("  param", p, "displayName=", JSON.stringify(dn), "isText=", isText);
         if (!dn) continue;
         params.push({ displayName: dn, isText });
       }
@@ -250,9 +256,12 @@ async function generate() {
   if (!tableRows.length) throw new Error("Load a spreadsheet first.");
   const mapping = getMapping();
   if (!Object.keys(mapping).length) {
-    const hint = mogrtParams.length
-      ? "Выберите параметр для колонки в разделе COLUMN MAPPING. Available: " + mogrtParams.map(p => p.displayName).join(", ")
-      : "Inspect Parameters сначала не нашёл текстовых параметров — добавьте имена вручную в COLUMN MAPPING.";
+    const textNames = mogrtParams.filter(p => p.isText).map(p => p.displayName);
+    const hint = textNames.length
+      ? "Выберите параметр для колонки в COLUMN MAPPING. Текстовые параметры: " + textNames.join(", ")
+      : (mogrtParams.length
+          ? "Текст не найден. Доступные параметры (не текст): " + mogrtParams.map(p => p.displayName).join(", ")
+          : "Inspect Parameters не нашёл параметров — первый шаг не дал результата.");
     throw new Error(hint);
   }
 
