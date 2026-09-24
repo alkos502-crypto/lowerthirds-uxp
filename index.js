@@ -2,7 +2,7 @@
 const ppro = require("premierepro");
 const { entrypoints } = require("uxp");
 const { localFileSystem } = require("uxp").storage;
-const XLSX = require("./js/xlsx.full.min.js");
+const XLSX = require("./xlsx.full.min.js");
 
 const NAME_HINT = ["Name", "Name Second line", "Титтр"]; // common param names hint
 
@@ -39,12 +39,12 @@ async function inspectMogrt() {
     if (!sequence) throw new Error("No active sequence. Open the target sequence.");
 
     const editor = ppro.SequenceEditor.getEditor(sequence);
-    // Insert a probe instance far out on a scratch video track, read text params, then remove it.
-    const probeTime = ppro.TickTime.createWithSeconds(3600); // 1h in — buffer area
+    // Insert a probe on track V1 at time 0, read text params, then remove it.
+    const probeTime = ppro.TickTime.TIME_ZERO;
     let items = [];
     project.lockedAccess(() => {
-      // videoTrackIndex high enough to be empty; audio -1 = no audio-linked MGT audio
-      items = editor.insertMogrtFromPath(mogrtPath, probeTime, 20, -1);
+      // Use valid, guaranteed-existing track indices (V1=0, A1=0).
+      items = editor.insertMogrtFromPath(mogrtPath, probeTime, 0, 0);
     });
     if (!items || !items.length) throw new Error("Insert failed: could not place probe clip.");
     const item = items[0];
@@ -247,7 +247,7 @@ async function generate() {
       let item;
       let placed = false;
       project.lockedAccess(() => {
-        const items = editor.insertMogrtFromPath(mogrtPath, start, trackIndex, -1);
+        const items = editor.insertMogrtFromPath(mogrtPath, start, trackIndex, 0);
         if (items && items.length) { item = items[0]; placed = true; }
       });
       if (!placed) throw new Error("Insert failed at row " + (i + 1) + ".");
