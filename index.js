@@ -40,7 +40,7 @@ async function inspectMogrt() {
 
     const editor = ppro.SequenceEditor.getEditor(sequence);
     // Insert a probe on track V1 at time 0, read text params, then remove it.
-    const probeTime = ppro.TickTime.TIME_ZERO;
+    const probeTime = ppro.TickTime.createWithSeconds(0);
     let items = [];
     project.lockedAccess(() => {
       // Use valid, guaranteed-existing track indices (V1=0, A1=0).
@@ -66,14 +66,18 @@ async function inspectMogrt() {
       }
     }
 
-    // Remove probe clip
+    // Remove probe clip. Wrapped entirely so failures don't break inspection.
     try {
       const sel = ppro.TrackItemSelection.createEmptySelection((s) => { s.addItem(item, false); });
-      project.lockedAccess(() => {
-        const action = editor.createRemoveItemsAction(sel, true, ppro.Constants.MediaType.VIDEO);
-        project.executeTransaction((ca) => ca.addAction(action), "Remove LT probe");
-      });
-    } catch (e) { /* probe leftover — acceptable, user can delete */ console.error(e); }
+      if (sel) {
+        project.lockedAccess(() => {
+          const action = editor.createRemoveItemsAction(sel, true, ppro.Constants.MediaType.VIDEO);
+          project.executeTransaction((ca) => ca.addAction(action), "Remove LT probe");
+        });
+      }
+    } catch (e) {
+      console.error("Could not remove probe clip:", e);
+    }
 
     mogrtParams = params;
     renderParams();
