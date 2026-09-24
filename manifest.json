@@ -1,0 +1,40 @@
+{
+  "manifestVersion": 5,
+  "id": "com.mytool.lowerthirds.uxp",
+  "name": "Lower Thirds Studio",
+  "version": "1.0.0",
+  "main": "index.html",
+  "host": {
+    "app": "premierepro",
+    "minVersion": "26.0.0"
+  },
+  "requiredPermissions": {
+    "localFileSystem": "fullAccess"
+  },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "lowerThirdsPanel",
+      "label": {
+        "default": "Lower Thirds Studio"
+      },
+      "description": "Create lower thirds on the timeline from spreadsheet data",
+      "minimumSize": {
+        "width": 360,
+        "height": 520
+      },
+      "maximumSize": {
+        "width": 900,
+        "height": 1600
+      },
+      "preferredDockedSize": {
+        "width": 380,
+        "height": 560
+      },
+      "preferredFloatingSize": {
+        "width": 380,
+        "height": 560
+      }
+    }
+  ]
+}
