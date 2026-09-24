@@ -2,6 +2,7 @@
 const ppro = require("premierepro");
 const { entrypoints } = require("uxp");
 const { localFileSystem } = require("uxp").storage;
+const XLSX = require("./js/xlsx.full.min.js");
 
 const NAME_HINT = ["Name", "Name Second line", "Титтр"]; // common param names hint
 
@@ -176,7 +177,7 @@ function getMapping() {
   return map;
 }
 
-async function setTextParams(project, item, row, mapping) {
+async function setTextParams(item, row, mapping) {
   const chain = await item.getComponentChain();
   const comps = chain.getComponentCount();
   const actions = [];
@@ -186,13 +187,14 @@ async function setTextParams(project, item, row, mapping) {
     for (let p = 0; p < pcount; p++) {
       const param = comp.getParam(p);
       const dn = String(param.displayName || "").trim();
-      // find a mapping whose param name matches
       for (const col in mapping) {
         if (mapping[col] === dn) {
           const val = String(row[col] != null ? row[col] : "");
           try {
-            const kf = param.createKeyframe(val);
-            actions.push(param.createSetValueAction(kf, true));
+            // For AE-based MOGRT text params the value must be a MogrtText object.
+            const mt = new ppro.MogrtText();
+            mt.setText(val);
+            actions.push(param.createSetValueAction(param.createKeyframe(mt), true));
           } catch (e) { console.error("param set failed: " + dn, e); }
         }
       }
@@ -230,8 +232,7 @@ async function generate() {
     starts = tableRows.map((_, i) => startOffset + i * duration);
   }
 
-  // Place each MOGRT inside a locked-access block (edits must occur there),
-  // then apply text actions in the same block via a transaction.
+  // Place each MOGRT and set its text in-place (item reference kept, no re-search).
   setProgress(0);
   $("btnGenerate").disabled = true;
   let done = 0;
@@ -251,44 +252,21 @@ async function generate() {
       });
       if (!placed) throw new Error("Insert failed at row " + (i + 1) + ".");
 
-      // Now apply duration, name and text in one undoable transaction.
+      // Read text params (async — must be outside lockedAccess), then apply
+      // duration/name/text in one undoable transaction.
+      const actions = await setTextParams(item, row, mapping);
+
       project.lockedAccess(() => {
         project.executeTransaction((ca) => {
           try { ca.addAction(item.createSetEndAction(end)); } catch (e) { }
           const nm = Object.keys(mapping).map(c => row[c]).filter(Boolean).join(" - ");
           if (nm) { try { ca.addAction(item.createSetNameAction(nm)); } catch (e) { } }
-        }, "LT place");
+          actions.forEach(a => { try { ca.addAction(a); } catch (e) { } });
+        }, "LT row " + (i + 1));
       });
 
       done++;
       setProgress((done / tableRows.length) * 100);
-      await new Promise(res => setTimeout(res, 30));
-    }
-
-    // Second pass: set text. Async component reads must happen OUTSIDE lockedAccess;
-    // re-find each placed clip, collect text actions, then apply in a locked block.
-    setStatus("Setting text...", "info");
-    for (let i = 0; i < tableRows.length; i++) {
-      const row = tableRows[i];
-      // Read the clip back from the timeline at its start position.
-      const track = await sequence.getVideoTrack(trackIndex);
-      const items = track.getTrackItems(ppro.Constants.TrackItemType.CLIP, false);
-      let clip = null;
-      for (let k = 0; k < items.length; k++) {
-        const it = items[k];
-        try { if (Math.abs(it.start.seconds - starts[i]) < 0.001) { clip = it; break; } } catch (e) { }
-      }
-      if (!clip) continue;
-
-      const actions = await setTextParams(project, clip, row, mapping);
-      if (!actions.length) { setStatus("No mapped text params matched row " + (i + 1) + ".", "err"); continue; }
-
-      project.lockedAccess(() => {
-        project.executeTransaction((ca) => {
-          actions.forEach(a => ca.addAction(a));
-        }, "LT text row " + (i + 1));
-      });
-      setProgress(((i + 1) / tableRows.length) * 100);
       await new Promise(res => setTimeout(res, 30));
     }
 
