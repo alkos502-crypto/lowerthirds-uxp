@@ -48,23 +48,28 @@ async function inspectMogrt() {
     });
     if (!items || !items.length) throw new Error("Insert failed: could not place probe clip.");
     const item = items[0];
+    console.log("Probe inserted:", item && item.name);
 
     const params = [];
     const chain = await item.getComponentChain();
     const comps = chain.getComponentCount();
+    console.log("Component chain count:", comps);
     for (let i = 0; i < comps; i++) {
       const comp = chain.getComponentAtIndex(i);
       let match = "";
       try { match = await comp.getMatchName(); } catch (e) { match = ""; }
       const isText = /ADBE Text/i.test(match) || /Text/i.test(match);
       const pcount = comp.getParamCount();
+      console.log("Component", i, "matchName=", match, "params=", pcount);
       for (let p = 0; p < pcount; p++) {
         const param = comp.getParam(p);
         const dn = String(param.displayName || "").trim();
+        console.log("  param", p, "displayName=", JSON.stringify(dn));
         if (!dn) continue;
         params.push({ displayName: dn, isText });
       }
     }
+    console.log("Total params found:", params.length);
 
     // Remove probe clip. Wrapped entirely so failures don't break inspection.
     try {
