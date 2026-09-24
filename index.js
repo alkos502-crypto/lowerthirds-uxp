@@ -142,21 +142,48 @@ function buildMapping() {
   const el = $("mapping");
   el.innerHTML = "";
   const names = tableHeaders.slice(0, 8);
+  const hasParams = mogrtParams.length > 0;
+
+  if (!hasParams) {
+    el.innerHTML = '<div class="hint">Run "Inspect Parameters" first to see MOGRT text params.</div>';
+  }
+
   names.forEach(col => {
     const row = document.createElement("div");
     row.className = "map-row";
-    row.innerHTML = '<span class="col"></span><input list="paramOpts" type="text" data-col="">';
+    row.innerHTML = '<span class="col"></span>';
     row.querySelector(".col").textContent = col;
-    const input = row.querySelector("input");
+
+    let input;
+    if (hasParams) {
+      const sel = document.createElement("select");
+      // empty -> not mapped
+      const emptyOpt = document.createElement("option");
+      emptyOpt.value = ""; emptyOpt.textContent = "(skip)";
+      sel.appendChild(emptyOpt);
+      // parameters (text ones first)
+      const sorted = mogrtParams.slice().sort((a, b) => (b.isText ? 1 : 0) - (a.isText ? 1 : 0));
+      sorted.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.displayName;
+        opt.textContent = (p.isText ? "[TEXT] " : "") + p.displayName;
+        // smart default: match by name fold
+        const norm = s => s.toLowerCase().replace(/[\s_]+/g, "").trim();
+        if (p.isText && norm(col) === norm(p.displayName)) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      input = sel;
+    } else {
+      input = document.createElement("input");
+      input.type = "text";
+      input.dataset.col = col;
+    }
+
     input.dataset.col = col;
-    input.value = col; // default guess: param == column
+    row.appendChild(input);
     el.appendChild(row);
   });
-  // shared datalist of param names
-  let dl = $("paramOpts");
-  if (!dl) { dl = document.createElement("datalist"); dl.id = "paramOpts"; document.body.appendChild(dl); }
-  const opts = mogrtParams.length ? mogrtParams.map(p => p.displayName) : NAME_HINT.concat(tableHeaders.slice(0,5));
-  dl.innerHTML = opts.map(n => '<option value="' + esc(n) + '"></option>').join("");
+
   refreshGenerate();
 }
 
@@ -170,8 +197,8 @@ function refreshGenerate() {
 
 function getMapping() {
   const map = {}; // column -> param display name
-  document.querySelectorAll("#mapping .map-row input").forEach(inp => {
-    const col = inp.dataset.col, val = inp.value.trim();
+  document.querySelectorAll("#mapping .map-row select, #mapping .map-row input").forEach(el => {
+    const col = el.dataset.col, val = String(el.value || "").trim();
     if (col && val) map[col] = val;
   });
   return map;
@@ -181,12 +208,15 @@ async function setTextParams(item, row, mapping) {
   const chain = await item.getComponentChain();
   const comps = chain.getComponentCount();
   const actions = [];
+  const foundInComp = []; // for debugging
   for (let i = 0; i < comps; i++) {
     const comp = chain.getComponentAtIndex(i);
     const pcount = comp.getParamCount();
     for (let p = 0; p < pcount; p++) {
       const param = comp.getParam(p);
       const dn = String(param.displayName || "").trim();
+      if (!dn) continue;
+      foundInComp.push(dn);
       for (const col in mapping) {
         if (mapping[col] === dn) {
           const val = String(row[col] != null ? row[col] : "");
@@ -199,6 +229,9 @@ async function setTextParams(item, row, mapping) {
         }
       }
     }
+  }
+  if (!actions.length) {
+    console.error("No mapped text params matched. Component params: " + JSON.stringify(foundInComp) + ". Mapping: " + JSON.stringify(mapping));
   }
   return actions;
 }

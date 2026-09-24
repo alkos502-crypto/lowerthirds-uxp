@@ -18,8 +18,11 @@ html, body {
   font-size: 13px;
   color: var(--txt);
   background: var(--bg);
+  height: 100%;
+  overflow-x: hidden;
 }
-body { overflow-x: hidden; overflow-y: auto; }
+html { overflow-y: auto; }
+body { overflow-y: auto; }
 .panel { padding: 14px; }
 
 header { margin-bottom: 14px; }
