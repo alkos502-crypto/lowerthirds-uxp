@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>LH3select</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="panel">
+    <header>
+      <div class="eyebrow">PREMIERE PRO · UXP</div>
+      <h1>LH3SELECT</h1>
+    </header>
+
+    <!-- Данные -->
+    <section class="card">
+      <div class="section-title">ДАННЫЕ ТИТРОВ</div>
+      <div class="row">
+        <div id="csvName" class="file-name">Файл не выбран</div>
+        <button id="btnCsv" class="sm">Обзор…</button>
+      </div>
+      <div class="hint">Поддерживаются .xlsx, .csv, .tsv (первый лист / первый блок)</div>
+      <div id="preview" class="preview"></div>
+      <div id="rowCount" class="hint"></div>
+    </section>
+
+    <!-- MOGRT -->
+    <section class="card">
+      <div class="section-title">MOGRT-ШАБЛОН</div>
+      <div class="row">
+        <div id="mogrtName" class="file-name">По умолчанию из конфига</div>
+        <button id="btnMogrt" class="sm">Выбрать</button>
+      </div>
+      <div class="hint">Трек: V3 · Длительность: 7 сек</div>
+    </section>
+
+    <!-- Действия -->
+    <button id="btnGenerate" class="primary" disabled>СОЗДАТЬ НИЖНИЕ ТРЕТИ</button>
+    <button id="btnClear" class="secondary" disabled>СБРОСИТЬ</button>
+
+    <div class="progress-wrap"><div id="progress"></div></div>
+    <div id="status" class="status">Готово</div>
+  </main>
+
+  <script src="index.js"></script>
+</body>
+</html>
